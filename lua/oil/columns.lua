@@ -206,8 +206,6 @@ end
 local icon_provider = util.get_icon_provider()
 if icon_provider then
   M.register("icon", {
-    virtual_text = {},
-
     render = function(entry, conf)
       local field_type = entry[FIELD_TYPE]
       local name = entry[FIELD_NAME]
@@ -246,7 +244,8 @@ if icon_provider then
     end,
 
     parse = function(line, conf)
-      return line:match("^(%S+)%s+(.*)$")
+      return line, line
+      -- return line:match("^(%S+)%s+(.*)$")
     end,
   })
 end
