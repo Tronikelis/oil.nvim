@@ -290,42 +290,58 @@ end
 M.render_table = function(lines, col_width)
   local str_lines = {}
   local highlights = {}
+  local extmarks = {}
+
   for _, cols in ipairs(lines) do
     local col = 0
-    local pieces = {}
-    for i, chunk in ipairs(cols) do
-      local text, hl
+    local id = cols[1]
+    local pieces = { id }
+
+    for i, chunk in ipairs({ unpack(cols, 2) }) do
+      local text, col_type, rest
+
       if type(chunk) == "table" then
-        text = chunk[1]
-        hl = chunk[2]
-      else
-        text = chunk
+        col_type = chunk[1]
+        text = chunk[2]
+        rest = { unpack(chunk, 3) }
       end
-      text = M.rpad(text, col_width[i])
-      table.insert(pieces, text)
-      local col_end = col + text:len() + 1
-      if hl then
-        if type(hl) == "table" then
-          -- hl has the form { [1]: hl_name, [2]: col_start, [3]: col_end }[]
-          -- Notice that col_start and col_end are relative position inside
-          -- that col, so we need to add the offset to them
-          for _, sub_hl in ipairs(hl) do
-            table.insert(highlights, {
-              sub_hl[1],
-              #str_lines,
-              col + sub_hl[2],
-              col + sub_hl[3],
-            })
-          end
-        else
-          table.insert(highlights, { hl, #str_lines, col, col_end })
+
+      local col_end = col
+
+      if text and col_type ~= "extmark" then
+        text = M.rpad(text, col_width[i])
+        col_end = col_end + text:len() + 1
+        table.insert(pieces, text)
+      end
+
+      if col_type == "hl_range_tuple" then
+        for _, sub_hl in ipairs(rest[1]) do
+          table.insert(highlights, {
+            sub_hl[1],
+            #str_lines,
+            col + sub_hl[2],
+            col + sub_hl[3],
+          })
         end
+      elseif col_type == "hl_tuple" then
+        table.insert(highlights, { rest[1], #str_lines, col, col_end })
+      elseif col_type == "extmark" then
+        table.insert(extmarks, {
+          #str_lines,
+          vim.tbl_deep_extend("force", rest[2], {
+            virt_text = { { text, rest[1] } },
+            invalidate = true,
+          }),
+        })
       end
+
       col = col_end
     end
+
     table.insert(str_lines, table.concat(pieces, " "))
   end
-  return str_lines, highlights
+
+  return str_lines, highlights, extmarks
 end
 
 ---@param bufnr integer

@@ -19,6 +19,7 @@ local all_columns = {}
 ---@field render_action? fun(action: oil.ChangeAction): string
 ---@field perform_action? fun(action: oil.ChangeAction, callback: fun(err: nil|string))
 ---@field get_sort_value? fun(entry: oil.InternalEntry): number|string
+---@field virtual_text? table
 
 ---@param name string
 ---@param column oil.ColumnDefinition
@@ -93,7 +94,8 @@ M.get_metadata_fetcher = function(adapter, column_defs)
   end
 end
 
-local EMPTY = { "-", "Comment" }
+---@type oil.TextChunk
+local EMPTY = { "hl_tuple", "-", "Comment" }
 
 M.EMPTY = EMPTY
 
@@ -135,7 +137,7 @@ M.render_col = function(adapter, col_def, entry)
       if type(highlight) == "function" then
         highlight = conf.highlight(chunk)
       end
-      return { chunk, highlight }
+      return { "hl_tuple", chunk, highlight }
     end
   end
   return chunk
@@ -204,6 +206,8 @@ end
 local icon_provider = util.get_icon_provider()
 if icon_provider then
   M.register("icon", {
+    virtual_text = {},
+
     render = function(entry, conf)
       local field_type = entry[FIELD_TYPE]
       local name = entry[FIELD_NAME]
@@ -230,7 +234,15 @@ if icon_provider then
           hl = conf.highlight
         end
       end
-      return { icon, hl }
+
+      return {
+        "extmark",
+        icon,
+        hl,
+        {
+          virt_text_pos = "right_align",
+        },
+      }
     end,
 
     parse = function(line, conf)

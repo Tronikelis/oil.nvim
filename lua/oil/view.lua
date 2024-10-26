@@ -640,13 +640,20 @@ local function render_buffer(bufnr, opts)
     end
   end
 
-  local lines, highlights = util.render_table(line_table, col_width)
+  local lines, highlights, extmarks = util.render_table(line_table, col_width)
 
   vim.bo[bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
   vim.bo[bufnr].modifiable = false
   vim.bo[bufnr].modified = false
   util.set_highlights(bufnr, highlights)
+
+  local ns = vim.api.nvim_create_namespace("oil-extmark")
+  vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+  for _, mark in ipairs(extmarks) do
+    vim.api.nvim_buf_set_extmark(bufnr, ns, mark[1], 0, mark[2])
+  end
 
   if opts.jump then
     -- TODO why is the schedule necessary?
@@ -693,17 +700,18 @@ M.format_entry_cols = function(entry, column_defs, col_width, adapter)
   -- Then add all the configured columns
   for i, column in ipairs(column_defs) do
     local chunk = columns.render_col(adapter, column, entry)
-    local text = type(chunk) == "table" and chunk[1] or chunk
-    ---@cast text string
-    col_width[i + 1] = math.max(col_width[i + 1], vim.api.nvim_strwidth(text))
+    -- local text = type(chunk) == "table" and chunk[1] or chunk
+    -- ---@cast text string
+    -- col_width[i + 1] = math.max(col_width[i + 1], vim.api.nvim_strwidth(text))
     table.insert(cols, chunk)
   end
+
   -- Always add the entry name at the end
   local entry_type = entry[FIELD_TYPE]
   if entry_type == "directory" then
-    table.insert(cols, { name .. "/", "OilDir" })
+    table.insert(cols, { "hl_tuple", name .. "/", "OilDir" })
   elseif entry_type == "socket" then
-    table.insert(cols, { name, "OilSocket" })
+    table.insert(cols, { "hl_tuple", name, "OilSocket" })
   elseif entry_type == "link" then
     local link_text
     if meta then
@@ -719,13 +727,14 @@ M.format_entry_cols = function(entry, column_defs, col_width, adapter)
       end
     end
 
-    table.insert(cols, { name, "OilLink" })
+    table.insert(cols, { "hl_tuple", name, "OilLink" })
     if link_text then
-      table.insert(cols, { link_text, "OilLinkTarget" })
+      table.insert(cols, { "hl_tuple", link_text, "OilLinkTarget" })
     end
   else
-    table.insert(cols, { name, "OilFile" })
+    table.insert(cols, { "hl_tuple", name, "OilFile" })
   end
+
   return cols
 end
 
