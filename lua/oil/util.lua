@@ -293,9 +293,9 @@ M.render_table = function(lines, col_width)
   local extmarks = {}
 
   for _, cols in ipairs(lines) do
-    local col = 0
     local id = cols[1]
     local pieces = { id }
+    local col = #id
 
     for i, chunk in ipairs({ unpack(cols, 2) }) do
       local text, col_type, rest

@@ -641,6 +641,7 @@ local function render_buffer(bufnr, opts)
   end
 
   local lines, highlights, extmarks = util.render_table(line_table, col_width)
+  vim.print({ highlights = highlights })
 
   vim.bo[bufnr].modifiable = true
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, true, lines)
